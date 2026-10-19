@@ -1,4 +1,7 @@
-// Starter designs for the playground. Each is the body of draw(ctx, width, height, t).
+// Starter designs for the playground. Each is the body of
+// draw(ctx, width, height, t, text, measure, wrap, lineHeight, fonts).
+// Shapes: the canvas 2D API. Text: text(fontId, string, x, y, {align}) with the bundled
+// bitmap fonts; x, y is the top-left of the line box. Never ctx.fillText (it antialiases).
 export const EXAMPLES = {
   'Watch face': `// A clock that updates every second: turn on "Re-run every 1000 ms"
 // and watch partial refreshes change only the digits.
@@ -7,80 +10,70 @@ const hh = String(now.getHours()).padStart(2, '0');
 const mm = String(now.getMinutes()).padStart(2, '0');
 const ss = String(now.getSeconds()).padStart(2, '0');
 
-ctx.textAlign = 'center';
-ctx.font = 'bold 64px system-ui';
-ctx.fillText(hh + ':' + mm, width / 2, height / 2 - 10);
-ctx.font = '24px system-ui';
-ctx.fillText(ss, width / 2, height / 2 + 30);
+text('spleen-32x64', hh + ':' + mm, width / 2, height / 2 - 48, {align: 'center'});
+text('terminus-24', ss, width / 2, height / 2 + 24, {align: 'center'});
+text('terminus-16', now.toDateString(), width / 2, 24, {align: 'center'});
 
-ctx.font = '16px system-ui';
-ctx.fillText(now.toDateString(), width / 2, 40);
-
-// status strip
-ctx.fillRect(0, height - 28, width, 28);
+// status strip: white text on an ink bar
+ctx.fillRect(0, height - 24, width, 24);
 ctx.fillStyle = '#fff';
-ctx.font = '14px system-ui';
-ctx.textAlign = 'left';
-ctx.fillText('Wi-Fi  ▮▮▮', 10, height - 9);
-ctx.textAlign = 'right';
-ctx.fillText('87%', width - 10, height - 9);`,
+text('terminus-16-bold', 'Wi-Fi ▮▮▮', 8, height - 20);
+text('terminus-16-bold', '87%', width - 8, height - 20, {align: 'right'});`,
 
-  'List screen': `// A menu. Edit the selected index and re-run with a partial refresh
+  'List screen': `// A menu. Change the selected index and re-run with a partial refresh
 // to see how little of the panel moves (and the ghost the old bar leaves).
 const items = ['Messages', 'Calls', 'Contacts', 'Departures', 'Timer', 'Settings'];
 const selected = 2;
-const rowHeight = 40;
+const rowHeight = 32;
 
-ctx.font = 'bold 18px system-ui';
-ctx.fillText('Apps', 12, 30);
-ctx.fillRect(0, 42, width, 2);
+text('terminus-20-bold', 'Apps', 12, 8);
+ctx.fillRect(0, 36, width, 2);
 
-ctx.font = '18px system-ui';
 items.forEach((item, i) => {
-  const y = 56 + i * rowHeight;
+  const y = 44 + i * rowHeight;
   if (i === selected) {
     ctx.fillRect(0, y, width, rowHeight);
     ctx.fillStyle = '#fff';
   }
-  ctx.fillText(item, 16, y + 26);
+  text('terminus-20', item, 16, y + 6);
+  text('terminus-20', '›', width - 20, y + 6);
   ctx.fillStyle = '#000';
 });`,
 
-  'Text and gray': `// Antialiased text becomes 1-bit. Compare thresholds and dithers
-// for small type, and see how gray fills dither on paper.
-ctx.font = '12px serif';
-const lines = [
-  'The quick brown fox jumps over the lazy dog.',
-  'Small serif text at 12 px: check the threshold.',
-  'Bold wins on e-paper; thin strokes break up.',
-];
-lines.forEach((line, i) => ctx.fillText(line, 8, 24 + i * 18));
-ctx.font = 'bold 12px sans-serif';
-lines.forEach((line, i) => ctx.fillText(line, 8, 90 + i * 18));
+  'Font specimen': `// Every bundled face at its size. Which one reads best at arm's length?
+let y = 4;
+for (const id of Object.keys(fonts)) {
+  if (y + lineHeight(id) > height) break;
+  text(id, id + '  The quick brown fox 0123', 4, y);
+  y += lineHeight(id) + 2;
+}`,
 
-// gray ramp
-for (let i = 0; i < 8; i++) {
-  const v = Math.round((i / 7) * 255);
-  ctx.fillStyle = 'rgb(' + v + ',' + v + ',' + v + ')';
-  ctx.fillRect(8 + i * ((width - 16) / 8), 150, (width - 16) / 8, 40);
+  Paragraph: `// Word-wrapped body text with a bold heading and a gray (dithered) panel.
+const body = 'E-paper holds an image without power, so a screen can stay on all day. ' +
+  'But each change takes about half a second and leaves a faint ghost, and every few ' +
+  'updates the panel must flash to clean itself. Design for few, deliberate changes.';
+text('terminus-20-bold', 'About e-paper', 12, 10);
+let y = 40;
+for (const line of wrap('terminus-16', body, width - 24)) {
+  text('terminus-16', line, 12, y);
+  y += lineHeight('terminus-16');
 }
+// a gray box: switch Dither to bayer or floyd-steinberg to see it as a pattern
+ctx.fillStyle = '#888';
+ctx.fillRect(12, y + 12, width - 24, 40);
 ctx.fillStyle = '#000';
-ctx.font = '12px sans-serif';
-ctx.fillText('Gray ramp: switch Dither to bayer or floyd-steinberg', 8, 210);`,
+text('terminus-14', 'gray fill → dither pattern', 20, y + 24);`,
 
   'Progress bar': `// Re-run every 200 ms: frequent partial updates build ghosting
 // until the panel's automatic full refresh (fullEvery) cleans it.
 const p = (t / 4000) % 1;
-ctx.font = 'bold 20px system-ui';
-ctx.fillText('Downloading…', 16, 60);
+text('terminus-20-bold', 'Downloading…', 16, 40);
 ctx.strokeStyle = '#000';
 ctx.lineWidth = 2;
 ctx.strokeRect(16, 80, width - 32, 24);
 ctx.fillRect(18, 82, (width - 36) * p, 20);
-ctx.font = '16px system-ui';
-ctx.fillText(Math.round(p * 100) + '%', 16, 130);`,
+text('terminus-16', Math.round(p * 100) + '%', 16, 116);`,
 
-  Blank: `// Start from scratch. Black ink on white paper; ctx is a 2D context.
-ctx.font = 'bold 24px system-ui';
-ctx.fillText('Hello, paper', 20, 50);`,
+  Blank: `// Start from scratch. Black ink on white paper.
+text('terminus-24-bold', 'Hello, paper', 20, 40);`,
 };

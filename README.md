@@ -149,9 +149,41 @@ encode a GIF of a transition in Node).
 | `packBits(values, w, h, {threshold, max})` / `unpackBits(bitmap, w, h)` | Per-pixel arrays ↔ packed bits                                |
 | `toBase64(bitmap)` / `bitmapLength(w, h)`                               |                                                               |
 
-Design note: use `dither: 'none'` for text and UI (crisp edges), `bayer` or
-`floyd-steinberg` for photos and gradients. Thin strokes and light grays break
-up on a 1-bit panel; bold weights at 12 px and above survive.
+Design note: use `dither: 'none'` for UI (crisp edges), `bayer` or
+`floyd-steinberg` for photos and gradients. Draw text with the bitmap fonts
+below, not `ctx.fillText`.
+
+### Fonts
+
+Text on e-paper must be drawn from bitmap fonts: scalable fonts antialias, and
+antialiasing thresholded to 1 bit is speckle. The package bundles three open
+bitmap families in BDF, the format firmware font engines such as u8g2 are
+generated from, so the simulator draws exactly the glyphs a device would.
+
+| Family   | Ids                                                                                        | License      |
+| -------- | ------------------------------------------------------------------------------------------ | ------------ |
+| Terminus | `terminus-12` … `terminus-32` (12, 14, 16, 18, 20, 22, 24, 28, 32), each also `-bold`      | OFL 1.1      |
+| Spleen   | `spleen-5x8`, `spleen-6x12`, `spleen-8x16`, `spleen-12x24`, `spleen-16x32`, `spleen-32x64` | BSD 2-clause |
+| Cozette  | `cozette-13`, `cozette-26`                                                                 | MIT          |
+
+All are monospace. Glyph coverage is Latin, Latin-1, Latin Extended-A,
+punctuation, arrows, box drawing, blocks and geometric shapes (trimmed from the
+upstream fonts by `tools/trim-bdf.js`). `FONTS` lists every id with its line
+height and cell width. Rules of thumb: 16 px for body text on a 240-wide
+panel, 12 px for captions, 24 px and up for anything read at a glance.
+
+| Function                                                 | Meaning                                                                                                   |
+| -------------------------------------------------------- | --------------------------------------------------------------------------------------------------------- |
+| `loadFonts(ids?, base?)`                                 | Browser: fetch and parse bundled fonts; returns `{id: font}`.                                             |
+| `loadFontsFromDisk(ids?, directory?)`                    | Node: the same from the file system.                                                                      |
+| `drawText(ctx, font, text, x, y)`                        | Paint glyphs with the context's `fillStyle`; `x, y` is the top-left of the line box. Returns the advance. |
+| `drawTextBitmap(bitmap, w, h, font, text, x, y, white?)` | Paint straight into a packed bitmap (no canvas needed).                                                   |
+| `measureText(font, text)`                                | Width in pixels.                                                                                          |
+| `wrapText(font, text, maxWidth)`                         | Word-wrap into lines.                                                                                     |
+| `parseBdf(text)` / `loadBdf(url)` / `toBdf(font, keep?)` | Use any other BDF font (u8g2's sources, X11 fonts, your own).                                             |
+
+A font has `height`, `ascent`, `descent` and a `glyphs` map; the baseline is at
+`y + font.ascent`.
 
 ### Presets
 
@@ -173,7 +205,7 @@ For a portrait 2.9" panel, swap width and height.
 3. Submit the same screen with `{full: true}` to see what a deliberate clean
    costs (about two seconds of flashing on most panels).
 4. Toggle `setEnabled(false)` to check the raw bitmap: threshold artifacts,
-   stray gray, antialiasing turned to speckle.
+   stray gray, anything drawn with `fillText` by mistake.
 5. Write tests against `EpaperPanel` directly with fake time (see `test/`):
    it is deterministic for a given seed.
 

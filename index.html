@@ -206,11 +206,42 @@
       </section>
     </main>
     <script type="module">
-      import {createEpaperDisplay, PRESETS} from './src/index.js';
+      import {
+        createEpaperDisplay,
+        PRESETS,
+        FONTS,
+        loadFonts,
+        drawText,
+        measureText,
+        wrapText,
+      } from './src/index.js';
       import {EXAMPLES} from './examples/snippets.js';
 
       const $ = (id) => document.getElementById(id);
       const screen = $('screen');
+      $('state').textContent = 'Loading fonts…';
+      const fonts = await loadFonts();
+      // Helpers handed to the snippet: pixel-exact bitmap text, never ctx.fillText.
+      const font = (id) => {
+        if (!fonts[id])
+          throw new RangeError(`Unknown font "${id}". Known: ${Object.keys(FONTS).join(', ')}`);
+        return fonts[id];
+      };
+      const helpers = {
+        fonts,
+        // text(fontId, string, x, y, {align: 'left' | 'center' | 'right'}) → advance width
+        text(id, string, x, y, {align = 'left'} = {}) {
+          const f = font(id),
+            w = measureText(f, string);
+          if (align === 'center') x -= w / 2;
+          else if (align === 'right') x -= w;
+          return drawText(ctxRef.ctx, f, string, x, y);
+        },
+        measure: (id, string) => measureText(font(id), string),
+        wrap: (id, string, maxWidth) => wrapText(font(id), string, maxWidth),
+        lineHeight: (id) => font(id).height,
+      };
+      const ctxRef = {ctx: null};
       let display = null,
         offscreen = null,
         timer = null,
@@ -253,7 +284,18 @@
         screen.style.height = `${display.height * $('zoom').value}px`;
       }
       function compile() {
-        return new Function('ctx', 'width', 'height', 't', $('code').value);
+        return new Function(
+          'ctx',
+          'width',
+          'height',
+          't',
+          'text',
+          'measure',
+          'wrap',
+          'lineHeight',
+          'fonts',
+          $('code').value,
+        );
       }
       function run(full = false) {
         try {
@@ -265,7 +307,18 @@
           ctx.fillRect(0, 0, offscreen.width, offscreen.height);
           ctx.fillStyle = '#000';
           if (!started) started = performance.now();
-          draw(ctx, offscreen.width, offscreen.height, performance.now() - started);
+          ctxRef.ctx = ctx;
+          draw(
+            ctx,
+            offscreen.width,
+            offscreen.height,
+            performance.now() - started,
+            helpers.text,
+            helpers.measure,
+            helpers.wrap,
+            helpers.lineHeight,
+            fonts,
+          );
           display.submit(offscreen, {
             full,
             dither: $('dither').value,

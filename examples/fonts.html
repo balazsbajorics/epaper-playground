@@ -1,0 +1,54 @@
+<!doctype html>
+<!-- Specimen of every bundled bitmap font, shown on a simulated 400 × 300 panel. -->
+<meta charset="utf-8" />
+<title>bitmap font specimen</title>
+<style>
+  body {
+    font: 14px system-ui;
+    margin: 24px;
+    background: #f3efe6;
+  }
+  canvas {
+    image-rendering: pixelated;
+    border: 1px solid #ccc;
+    display: block;
+    margin: 8px 0 20px;
+  }
+  h3 {
+    margin: 16px 0 0;
+    font-size: 14px;
+  }
+</style>
+<h1>Bundled bitmap fonts</h1>
+<p>
+  Each face at its native size, drawn pixel for pixel. Terminus is OFL, Spleen BSD, Cozette MIT.
+</p>
+<div id="out"></div>
+<script type="module">
+  import {createEpaperDisplay, FONTS, loadFonts, drawText, measureText} from '../src/index.js';
+  const fonts = await loadFonts(),
+    out = document.getElementById('out');
+  for (const [id, entry] of Object.entries(FONTS)) {
+    const h = document.createElement('h3');
+    h.textContent = `${id}: ${entry.height} px line, ${entry.cell} px cell${entry.bold ? ', bold' : ''}`;
+    out.append(h);
+    const canvas = document.createElement('canvas'),
+      lines = [
+        'The quick brown fox jumps over the lazy dog 0123456789',
+        'ÀÉÎÕÜ àéîõü ß € → ← ↑ ↓ ■ □ ▲ ▼ ─ │ ┌ ┐ █ ▓ ▒ ░',
+      ],
+      font = fonts[id],
+      width = Math.max(400, ...lines.map((l) => measureText(font, l) + 16)),
+      height = font.height * lines.length + 16;
+    canvas.style.width = `${width * 2}px`;
+    out.append(canvas);
+    const display = createEpaperDisplay(canvas, {width, height, enabled: false});
+    const frame = new OffscreenCanvas(width, height),
+      ctx = frame.getContext('2d');
+    ctx.fillStyle = '#fff';
+    ctx.fillRect(0, 0, width, height);
+    ctx.fillStyle = '#000';
+    lines.forEach((line, i) => drawText(ctx, font, line, 8, 8 + i * font.height));
+    display.submit(frame, {full: true});
+  }
+</script>

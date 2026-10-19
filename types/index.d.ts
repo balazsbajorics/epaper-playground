@@ -134,3 +134,64 @@ export function toBitmap(
 export function toBase64(bitmap: Uint8Array): string;
 export function noise(x: number, y: number, seed: number): number;
 export function cloud(x: number, y: number, size: number, seed: number): number;
+
+export interface Glyph {
+  width: number;
+  bbw: number;
+  bbh: number;
+  bbx: number;
+  bby: number;
+  rows: Uint8Array[];
+}
+export interface BdfFont {
+  name: string;
+  size: number;
+  ascent: number;
+  descent: number;
+  height: number;
+  glyphs: Map<number, Glyph>;
+  fallback?: Glyph;
+}
+export interface FontEntry {
+  file: string;
+  height: number;
+  cell: number;
+  bold: boolean;
+  family: string;
+}
+export const FONTS: Record<string, FontEntry>;
+export function loadFonts(ids?: string[], base?: string | URL): Promise<Record<string, BdfFont>>;
+export function loadFontsFromDisk(
+  ids?: string[],
+  directory?: string | URL,
+): Promise<Record<string, BdfFont>>;
+export function parseBdf(text: string): BdfFont;
+export function loadBdf(url: string | URL): Promise<BdfFont>;
+export function toBdf(font: BdfFont, keep?: (codepoint: number) => boolean): string;
+export function glyphFor(font: BdfFont, codepoint: number): Glyph | undefined;
+export function measureText(font: BdfFont, text: string): number;
+export function eachPixel(
+  font: BdfFont,
+  text: string,
+  x: number,
+  y: number,
+  visit: (x: number, y: number) => void,
+): number;
+export function drawText(
+  ctx: {fillRect(x: number, y: number, w: number, h: number): void},
+  font: BdfFont,
+  text: string,
+  x: number,
+  y: number,
+): number;
+export function drawTextBitmap(
+  bitmap: Uint8Array,
+  width: number,
+  height: number,
+  font: BdfFont,
+  text: string,
+  x: number,
+  y: number,
+  white?: boolean,
+): number;
+export function wrapText(font: BdfFont, text: string, maxWidth: number): string[];

@@ -14,3 +14,15 @@ export {
   toBase64,
 } from './bitmap.js';
 export {noise, cloud} from './noise.js';
+export {
+  parseBdf,
+  loadBdf,
+  toBdf,
+  glyphFor,
+  measureText,
+  eachPixel,
+  drawText,
+  drawTextBitmap,
+  wrapText,
+} from './bdf.js';
+export {FONTS, loadFonts, loadFontsFromDisk} from './fonts.js';

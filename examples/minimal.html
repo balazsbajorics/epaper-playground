@@ -1,11 +1,12 @@
 <!doctype html>
-<!-- The smallest integration: draw on an offscreen canvas, submit it to the panel. -->
+<!-- The smallest integration: draw on an offscreen canvas with a bitmap font, submit it. -->
 <meta charset="utf-8" />
 <canvas id="screen" style="width: 480px; image-rendering: pixelated"></canvas>
 <script type="module">
-  import {createEpaperDisplay, preset} from '../src/index.js';
+  import {createEpaperDisplay, preset, loadFonts, drawText} from '../src/index.js';
 
   const display = createEpaperDisplay(document.getElementById('screen'), preset('3.1'));
+  const fonts = await loadFonts(['spleen-16x32', 'terminus-16']);
   const frame = document.createElement('canvas');
   frame.width = display.width;
   frame.height = display.height;
@@ -15,8 +16,8 @@
     ctx.fillStyle = '#fff';
     ctx.fillRect(0, 0, frame.width, frame.height);
     ctx.fillStyle = '#000';
-    ctx.font = 'bold 48px sans-serif';
-    ctx.fillText(new Date().toLocaleTimeString(), 10, 160);
+    drawText(ctx, fonts['spleen-16x32'], new Date().toLocaleTimeString(), 16, 120);
+    drawText(ctx, fonts['terminus-16'], 'partial refresh every second', 16, 170);
     display.submit(frame); // partial refresh; display.submit(frame, {full: true}) for a clean one
   }
   render();
