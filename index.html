@@ -1,0 +1,337 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>e-paper playground</title>
+    <style>
+      :root {
+        color-scheme: light;
+        font:
+          14px/1.4 system-ui,
+          sans-serif;
+        --line: #d7d2c8;
+      }
+      body {
+        margin: 0;
+        background: #f3efe6;
+        color: #222;
+      }
+      main {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) minmax(320px, 520px);
+        gap: 24px;
+        padding: 24px;
+        max-width: 1400px;
+        margin: 0 auto;
+      }
+      @media (max-width: 900px) {
+        main {
+          grid-template-columns: 1fr;
+        }
+      }
+      h1 {
+        font-size: 18px;
+        margin: 0 0 4px;
+      }
+      p {
+        margin: 0 0 12px;
+        color: #555;
+      }
+      .stage {
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+        align-items: flex-start;
+      }
+      .bezel {
+        background: #ece9e1;
+        border: 1px solid var(--line);
+        border-radius: 10px;
+        padding: 18px;
+        box-shadow: inset 0 1px 6px rgb(0 0 0 / 0.08);
+      }
+      canvas#screen {
+        display: block;
+        image-rendering: pixelated;
+        border: 1px solid #c9c4b8;
+        background: #f0efea;
+      }
+      .controls,
+      .row {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px 14px;
+        align-items: center;
+      }
+      label {
+        display: inline-flex;
+        gap: 4px;
+        align-items: center;
+      }
+      select,
+      input[type='number'],
+      button {
+        font: inherit;
+        padding: 3px 8px;
+        border: 1px solid #b8b2a6;
+        border-radius: 5px;
+        background: #fff;
+      }
+      button {
+        cursor: pointer;
+      }
+      button.primary {
+        background: #222;
+        color: #fff;
+        border-color: #222;
+      }
+      #state {
+        min-width: 11em;
+        font-variant-numeric: tabular-nums;
+        color: #444;
+      }
+      textarea {
+        width: 100%;
+        box-sizing: border-box;
+        min-height: 360px;
+        font:
+          12.5px/1.45 ui-monospace,
+          Menlo,
+          Consolas,
+          monospace;
+        padding: 10px;
+        border: 1px solid var(--line);
+        border-radius: 6px;
+        background: #fffdf8;
+        resize: vertical;
+        tab-size: 2;
+      }
+      #error {
+        color: #b3261e;
+        white-space: pre-wrap;
+        min-height: 1.4em;
+      }
+      .hint {
+        font-size: 12.5px;
+      }
+      code {
+        background: #e8e4da;
+        padding: 0 4px;
+        border-radius: 3px;
+      }
+      details {
+        margin-top: 8px;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <section class="stage">
+        <div>
+          <h1>e-paper playground</h1>
+          <p>
+            A simulated monochrome e-paper panel: partial and full refresh waveforms, ghosting,
+            paper texture. Draw with the canvas 2D API on the right and watch how the panel shows
+            it.
+          </p>
+        </div>
+        <div class="controls">
+          <label
+            >Panel
+            <select id="preset"></select>
+          </label>
+          <label
+            >Zoom
+            <select id="zoom">
+              <option value="1">1×</option>
+              <option value="2" selected>2×</option>
+              <option value="3">3×</option>
+              <option value="4">4×</option>
+            </select>
+          </label>
+          <label><input id="eink" type="checkbox" checked /> E-paper simulation</label>
+          <button id="refresh">Full refresh</button>
+          <button id="reset">Reset</button>
+          <button id="save">Save PNG</button>
+          <span id="state">Ready</span>
+        </div>
+        <div class="bezel"><canvas id="screen" aria-label="Simulated e-paper panel"></canvas></div>
+        <p class="hint">
+          Drop an image on the panel to see it dithered. Timings are approximations of typical
+          waveforms, not measurements of a specific module.
+        </p>
+      </section>
+
+      <section>
+        <div class="row" style="margin-bottom: 8px">
+          <label
+            >Example
+            <select id="example"></select>
+          </label>
+          <label
+            >Dither
+            <select id="dither">
+              <option value="none">none (threshold)</option>
+              <option value="bayer">bayer 4×4</option>
+              <option value="floyd-steinberg">floyd-steinberg</option>
+            </select>
+          </label>
+          <label
+            >Threshold <input id="threshold" type="number" min="0" max="1" step="0.05" value="0.5"
+          /></label>
+        </div>
+        <textarea id="code" spellcheck="false"></textarea>
+        <div class="row" style="margin-top: 8px">
+          <button id="run" class="primary">Run (partial)</button>
+          <button id="run-full">Run (full refresh)</button>
+          <label><input id="live" type="checkbox" /> Re-run every</label>
+          <label><input id="interval" type="number" min="100" step="100" value="1000" /> ms</label>
+          <span class="hint">⌘/Ctrl+Enter runs</span>
+        </div>
+        <div id="error"></div>
+        <details>
+          <summary>How the code runs</summary>
+          <p class="hint">
+            Your code is the body of <code>function draw(ctx, width, height, t)</code>.
+            <code>ctx</code> is a normal 2D context of a canvas the size of the panel;
+            <code>t</code> is milliseconds since the first run. Draw in any colour: the result is
+            converted to 1-bit with the dither and threshold above, then submitted to the panel as a
+            partial refresh (or full with the second button). Partial refreshes only move the pixels
+            that changed and leave ghosts; after <code>fullEvery</code> partials the panel cleans
+            itself. See the
+            <a href="https://github.com/balazsbajorics/epaper-playground">README</a> for the API.
+          </p>
+        </details>
+      </section>
+    </main>
+    <script type="module">
+      import {createEpaperDisplay, PRESETS} from './src/index.js';
+      import {EXAMPLES} from './examples/snippets.js';
+
+      const $ = (id) => document.getElementById(id);
+      const screen = $('screen');
+      let display = null,
+        offscreen = null,
+        timer = null,
+        started = 0;
+
+      for (const name of Object.keys(PRESETS)) {
+        const p = PRESETS[name],
+          option = new Option(`${name}" ${p.width} × ${p.height}`, name);
+        $('preset').append(option);
+      }
+      $('preset').value = '3.1';
+      for (const name of Object.keys(EXAMPLES)) $('example').append(new Option(name, name));
+
+      function state(s) {
+        $('state').textContent = !s.enabled
+          ? 'Instant preview'
+          : s.mode === 'full'
+            ? 'Full refresh…'
+            : s.mode === 'partial'
+              ? 'Partial draw…'
+              : `Ready · ${s.partials}/${display.panel.fullEvery} partials`;
+      }
+      function build() {
+        display?.dispose();
+        const options = PRESETS[$('preset').value];
+        display = createEpaperDisplay(screen, {
+          ...options,
+          enabled: $('eink').checked,
+          onState: state,
+        });
+        offscreen = document.createElement('canvas');
+        offscreen.width = options.width;
+        offscreen.height = options.height;
+        zoom();
+        display.reset();
+        run(true);
+      }
+      function zoom() {
+        screen.style.width = `${display.width * $('zoom').value}px`;
+        screen.style.height = `${display.height * $('zoom').value}px`;
+      }
+      function compile() {
+        return new Function('ctx', 'width', 'height', 't', $('code').value);
+      }
+      function run(full = false) {
+        try {
+          const draw = compile(),
+            ctx = offscreen.getContext('2d');
+          ctx.reset?.();
+          ctx.clearRect(0, 0, offscreen.width, offscreen.height);
+          ctx.fillStyle = '#fff';
+          ctx.fillRect(0, 0, offscreen.width, offscreen.height);
+          ctx.fillStyle = '#000';
+          if (!started) started = performance.now();
+          draw(ctx, offscreen.width, offscreen.height, performance.now() - started);
+          display.submit(offscreen, {
+            full,
+            dither: $('dither').value,
+            threshold: Number($('threshold').value),
+          });
+          $('error').textContent = '';
+        } catch (error) {
+          $('error').textContent = String(error.stack || error);
+        }
+      }
+      function live() {
+        clearInterval(timer);
+        timer = null;
+        if ($('live').checked)
+          timer = setInterval(() => run(false), Math.max(100, $('interval').value));
+      }
+
+      $('preset').onchange = build;
+      $('zoom').onchange = zoom;
+      $('eink').onchange = () => display.setEnabled($('eink').checked);
+      $('refresh').onclick = () => display.refresh();
+      $('reset').onclick = () => display.reset();
+      $('save').onclick = () => {
+        const a = document.createElement('a');
+        a.download = `epaper-${display.width}x${display.height}.png`;
+        a.href = screen.toDataURL('image/png');
+        a.click();
+      };
+      $('run').onclick = () => run(false);
+      $('run-full').onclick = () => run(true);
+      $('live').onchange = live;
+      $('interval').onchange = live;
+      $('example').onchange = () => {
+        $('code').value = EXAMPLES[$('example').value];
+        run(true);
+      };
+      $('code').onkeydown = (event) => {
+        if ((event.metaKey || event.ctrlKey) && event.key === 'Enter') {
+          event.preventDefault();
+          run(false);
+        }
+      };
+      $('dither').onchange = $('threshold').onchange = () => run(false);
+
+      screen.ondragover = (event) => event.preventDefault();
+      screen.ondrop = async (event) => {
+        event.preventDefault();
+        const file = event.dataTransfer.files[0];
+        if (!file || !file.type.startsWith('image/')) return;
+        const bitmap = await createImageBitmap(file),
+          ctx = offscreen.getContext('2d'),
+          scale = Math.min(offscreen.width / bitmap.width, offscreen.height / bitmap.height),
+          w = bitmap.width * scale,
+          h = bitmap.height * scale;
+        ctx.fillStyle = '#fff';
+        ctx.fillRect(0, 0, offscreen.width, offscreen.height);
+        ctx.drawImage(bitmap, (offscreen.width - w) / 2, (offscreen.height - h) / 2, w, h);
+        display.submit(offscreen, {
+          full: true,
+          dither: $('dither').value === 'none' ? 'floyd-steinberg' : $('dither').value,
+          threshold: Number($('threshold').value),
+        });
+      };
+
+      $('code').value = EXAMPLES[Object.keys(EXAMPLES)[0]];
+      build();
+    </script>
+  </body>
+</html>

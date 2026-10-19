@@ -1,0 +1,49 @@
+{
+  "name": "epaper-playground",
+  "version": "0.1.0",
+  "description": "A monochrome e-paper display simulator for the browser: partial and full refresh waveforms, ghosting, panel texture. Test UI designs for e-ink panels without hardware.",
+  "type": "module",
+  "main": "./src/index.js",
+  "exports": {
+    ".": {
+      "types": "./types/index.d.ts",
+      "default": "./src/index.js"
+    }
+  },
+  "types": "./types/index.d.ts",
+  "files": [
+    "src",
+    "types",
+    "README.md",
+    "LICENSE"
+  ],
+  "sideEffects": false,
+  "scripts": {
+    "test": "node --test test/*.test.js",
+    "start": "node serve.js",
+    "format": "prettier --write .",
+    "format:check": "prettier --check ."
+  },
+  "keywords": [
+    "e-paper",
+    "eink",
+    "e-ink",
+    "epd",
+    "display",
+    "simulator",
+    "canvas",
+    "ghosting"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/balazsbajorics/epaper-playground.git"
+  },
+  "homepage": "https://balazsbajorics.github.io/epaper-playground/",
+  "license": "MIT",
+  "engines": {
+    "node": ">=20"
+  },
+  "devDependencies": {
+    "prettier": "3.9.10"
+  }
+}
